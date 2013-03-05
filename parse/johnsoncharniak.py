@@ -7,12 +7,27 @@ Created on 19/02/2013
 import subprocess
 import tempfile
 import os
+import ConfigParser
 from nltk.parse.api import ParserI
 from nltk.tree import Tree
 
 
 class JohnsonCharniak(ParserI):
 
+
+    def __init__(self):
+        config = ConfigParser.ConfigParser()
+        config.read('nltk/parse/johnsoncharniak.ini')
+        section = 'Paths'
+        modeldir = config.get(section, 'modeldir')
+        estimatornickname = config.get(section, 'estimatornickname')
+        self.basedir = config.get(section, 'basedir')
+        self.features = modeldir + config.get(section, 'features-file')
+        self.weights = modeldir + estimatornickname + config.get(section, 'weights-suffix')
+        self.firststage = config.get(section, 'firststage')
+        self.secondstage = config.get(section, 'secondstage')
+        self.datadir = config.get(section, 'datadir')
+        
 
     def parse(self, sent):
         sentfilepath  = self.sent_to_temp(sent)
@@ -31,18 +46,9 @@ class JohnsonCharniak(ParserI):
     
     
     def jc_parse(self, sentfilepath):
-        basedir = "/mnt/hgfs/workspace/johnsoncharniak/reranking-parser/"
-        modeldir = "second-stage/models/ec50spfinal/"
-        estimatornickname = "cvlm-l1c10P1"
-        features = modeldir + "/features.gz"
-        weights = modeldir + estimatornickname + "-weights.gz"
-        firststage = "first-stage/PARSE/parseIt"
-        secondstage = "second-stage/programs/features/best-parses"
-        datadir = "first-stage/DATA/EN/"
-#        testfile = "sample-data.txt"
-        argsfirst = [firststage, "-l399", "-N50", datadir, sentfilepath]
-        argssecond = [secondstage, "-l", features, weights]
-        os.chdir(basedir)
+        argsfirst = [self.firststage, "-l399", "-N50", self.datadir, sentfilepath]
+        argssecond = [self.secondstage, "-l", self.features, self.weights]
+        os.chdir(self.basedir)
         p1 = subprocess.Popen(argsfirst, stdout=subprocess.PIPE)
         p2 = subprocess.Popen(argssecond, stdin=p1.stdout, stdout=subprocess.PIPE)
         p1.stdout.close()
